@@ -21,7 +21,6 @@ const autoReplyTemplateId = process.env.NEXT_PUBLIC_EMAILJS_AUTOREPLY_TEMPLATE_I
 const publicKey = process.env.NEXT_PUBLIC_EMAILJS_PUBLIC_KEY ?? "";
 const ownerEmail = "jhalakchoudhary143@gmail.com";
 const emailjsReady = Boolean(serviceId && templateId && autoReplyTemplateId && publicKey);
-const showEmailConfigHint = process.env.NODE_ENV !== "production";
 
 export function ContactSection() {
   const {
@@ -34,7 +33,13 @@ export function ContactSection() {
 
   async function onSubmit(values: FormValues) {
     if (!emailjsReady) {
-      setStatus("idle");
+      const subject = encodeURIComponent(`Portfolio collaboration request from ${values.name}`);
+      const body = encodeURIComponent(
+        `Name: ${values.name}\nEmail: ${values.email}\n\nMessage:\n${values.message}\n\n---\nSent from portfolio contact form`,
+      );
+      window.location.href = `mailto:${ownerEmail}?subject=${subject}&body=${body}`;
+      setStatus("ok");
+      reset();
       return;
     }
     setStatus("loading");
@@ -184,22 +189,10 @@ export function ContactSection() {
               )}
             </div>
 
-            {!emailjsReady && showEmailConfigHint && (
-              <p className="mt-3 rounded-xl border border-amber-500/30 bg-amber-500/10 px-4 py-3 text-xs text-amber-100">
-                EmailJS is not configured. Add{" "}
-                <code className="rounded bg-black/30 px-1 py-0.5">
-                  NEXT_PUBLIC_EMAILJS_SERVICE_ID, NEXT_PUBLIC_EMAILJS_TEMPLATE_ID,
-                  NEXT_PUBLIC_EMAILJS_AUTOREPLY_TEMPLATE_ID, NEXT_PUBLIC_EMAILJS_PUBLIC_KEY
-                </code>{" "}
-                to{" "}
-                <code className="rounded bg-black/30 px-1 py-0.5">.env.local</code>.
-              </p>
-            )}
-
             <div className="mt-5 flex flex-wrap items-center gap-3">
               <button
                 type="submit"
-                disabled={status === "loading" || !emailjsReady}
+                disabled={status === "loading"}
                 className="inline-flex items-center gap-2 rounded-xl bg-gradient-to-r from-[#6B46C1] to-[#4299E1] px-5 py-3 text-sm font-bold text-white shadow-lg transition hover:brightness-110 disabled:cursor-not-allowed disabled:opacity-60"
               >
                 {status === "loading" ? (
@@ -212,11 +205,6 @@ export function ContactSection() {
               {status === "ok" && (
                 <span className="text-sm font-medium text-[#48BB78]">
                   Message sent successfully. Thank you for your time.
-                </span>
-              )}
-              {!emailjsReady && (
-                <span className="text-sm font-medium text-amber-300">
-                  Contact form is temporarily unavailable. Please use LinkedIn or GitHub.
                 </span>
               )}
               {status === "err" && (
