@@ -14,7 +14,7 @@ Facts about Jhalak:
 - ${ABOUT_TEXT}
 - Technical skills (with rough proficiency): ${tech}
 - Soft skills: ${soft}
-- Social: LinkedIn ${SOCIAL.linkedin}, GitHub ${SOCIAL.github}, Instagram ${SOCIAL.instagram}
+- Social: LinkedIn ${SOCIAL.linkedin}, GitHub ${SOCIAL.github}
 - Sample projects:
 ${projects}
 `;
@@ -35,7 +35,7 @@ export function fallbackAnswer(question: string): string {
   }
 
   if (/(cgpa|gpa|grade|semester|year|student|college|b\.?tech|education)/.test(q)) {
-    return "Jhalak is a B.Tech student in her 2nd year, 4th semester, with a CGPA of 8.37. She’s passionate about coding and web development.";
+    return "Jhalak is a B.Tech student in her 2nd year, 4th semester, with a CGPA of 8.37..";
   }
 
   if (/(skill|tech|stack|know|language|framework)/.test(q)) {
