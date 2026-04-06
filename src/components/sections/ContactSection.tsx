@@ -17,8 +17,11 @@ type FormValues = {
 
 const serviceId = process.env.NEXT_PUBLIC_EMAILJS_SERVICE_ID ?? "";
 const templateId = process.env.NEXT_PUBLIC_EMAILJS_TEMPLATE_ID ?? "";
+const autoReplyTemplateId = process.env.NEXT_PUBLIC_EMAILJS_AUTOREPLY_TEMPLATE_ID ?? "";
 const publicKey = process.env.NEXT_PUBLIC_EMAILJS_PUBLIC_KEY ?? "";
-const emailjsReady = Boolean(serviceId && templateId && publicKey);
+const ownerEmail = "jhalakchoudhary143@gmail.com";
+const emailjsReady = Boolean(serviceId && templateId && autoReplyTemplateId && publicKey);
+const showEmailConfigHint = process.env.NODE_ENV !== "production";
 
 export function ContactSection() {
   const {
@@ -31,21 +34,40 @@ export function ContactSection() {
 
   async function onSubmit(values: FormValues) {
     if (!emailjsReady) {
-      setStatus("err");
+      setStatus("idle");
       return;
     }
     setStatus("loading");
     try {
-      await emailjs.send(
-        serviceId,
-        templateId,
-        {
-          from_name: values.name,
-          reply_to: values.email,
-          message: values.message,
-        },
-        { publicKey },
-      );
+      await Promise.all([
+        emailjs.send(
+          serviceId,
+          templateId,
+          {
+            to_name: "Jhalak",
+            to_email: ownerEmail,
+            from_name: values.name,
+            from_email: values.email,
+            reply_to: values.email,
+            subject: "Jhalak, a new contact request has arrived",
+            message: values.message,
+          },
+          { publicKey },
+        ),
+        emailjs.send(
+          serviceId,
+          autoReplyTemplateId,
+          {
+            to_name: values.name,
+            to_email: values.email,
+            from_name: "Jhalak",
+            subject: "Waiting for Jhalak reply",
+            message:
+              "Hi, thank you for reaching out. If you want me to collaborate on your project, please send me details by email and I will connect with you soon. Meanwhile, please wait for Jhalak's reply.",
+          },
+          { publicKey },
+        ),
+      ]);
       setStatus("ok");
       reset();
     } catch {
@@ -65,9 +87,7 @@ export function ContactSection() {
         >
           <p className="text-xs font-semibold uppercase tracking-[0.2em] text-violet-400">Contact</p>
           <h2 className="mt-2 text-2xl font-bold tracking-tight sm:text-3xl">Let&apos;s connect</h2>
-          <p className="mt-3 text-muted">
-            Send a message — works when EmailJS keys are configured (see README).
-          </p>
+          <p className="mt-3 text-muted">Send a message about projects, internships, or collaborations.</p>
         </motion.div>
 
         <div className="grid gap-8 lg:grid-cols-5">
@@ -164,10 +184,14 @@ export function ContactSection() {
               )}
             </div>
 
-            {!emailjsReady && (
+            {!emailjsReady && showEmailConfigHint && (
               <p className="mt-3 rounded-xl border border-amber-500/30 bg-amber-500/10 px-4 py-3 text-xs text-amber-100">
                 EmailJS is not configured. Add{" "}
-                <code className="rounded bg-black/30 px-1 py-0.5">NEXT_PUBLIC_EMAILJS_*</code> to{" "}
+                <code className="rounded bg-black/30 px-1 py-0.5">
+                  NEXT_PUBLIC_EMAILJS_SERVICE_ID, NEXT_PUBLIC_EMAILJS_TEMPLATE_ID,
+                  NEXT_PUBLIC_EMAILJS_AUTOREPLY_TEMPLATE_ID, NEXT_PUBLIC_EMAILJS_PUBLIC_KEY
+                </code>{" "}
+                to{" "}
                 <code className="rounded bg-black/30 px-1 py-0.5">.env.local</code>.
               </p>
             )}
@@ -186,12 +210,17 @@ export function ContactSection() {
                 Send message
               </button>
               {status === "ok" && (
-                <span className="text-sm font-medium text-[#48BB78]">Message sent. Thank you!</span>
+                <span className="text-sm font-medium text-[#48BB78]">
+                  Message sent successfully. Thank you for your time.
+                </span>
+              )}
+              {!emailjsReady && (
+                <span className="text-sm font-medium text-amber-300">
+                  Contact form is temporarily unavailable. Please use LinkedIn or GitHub.
+                </span>
               )}
               {status === "err" && (
-                <span className="text-sm font-medium text-red-400">
-                  Could not send. Check EmailJS keys or try again.
-                </span>
+                <span className="text-sm font-medium text-red-400">Could not send right now. Please try again.</span>
               )}
             </div>
           </motion.form>

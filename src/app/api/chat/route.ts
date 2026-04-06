@@ -8,6 +8,7 @@ type ChatBody = {
 
 const MAX_LEN = 2000;
 const MAX_HISTORY = 12;
+const OPENAI_TIMEOUT_MS = 12000;
 
 export async function POST(req: Request) {
   let body: ChatBody;
@@ -41,34 +42,41 @@ export async function POST(req: Request) {
     try {
       const model = process.env.OPENAI_MODEL ?? "gpt-4o-mini";
       const sys = buildAssistantSystemPrompt();
+      const controller = new AbortController();
+      const timeoutId = setTimeout(() => controller.abort(), OPENAI_TIMEOUT_MS);
       const messages = [
         { role: "system" as const, content: sys },
         ...history.map((m) => ({ role: m.role, content: m.content })),
         { role: "user" as const, content: message },
       ];
 
-      const res = await fetch("https://api.openai.com/v1/chat/completions", {
-        method: "POST",
-        headers: {
-          Authorization: `Bearer ${apiKey}`,
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify({
-          model,
-          messages,
-          max_tokens: 500,
-          temperature: 0.65,
-        }),
-      });
+      try {
+        const res = await fetch("https://api.openai.com/v1/chat/completions", {
+          method: "POST",
+          headers: {
+            Authorization: `Bearer ${apiKey}`,
+            "Content-Type": "application/json",
+          },
+          body: JSON.stringify({
+            model,
+            messages,
+            max_tokens: 500,
+            temperature: 0.65,
+          }),
+          signal: controller.signal,
+        });
 
-      if (res.ok) {
-        const data = (await res.json()) as {
-          choices?: { message?: { content?: string } }[];
-        };
-        const reply = data.choices?.[0]?.message?.content?.trim();
-        if (reply) {
-          return NextResponse.json({ reply, source: "openai" as const });
+        if (res.ok) {
+          const data = (await res.json()) as {
+            choices?: { message?: { content?: string } }[];
+          };
+          const reply = data.choices?.[0]?.message?.content?.trim();
+          if (reply) {
+            return NextResponse.json({ reply, source: "openai" as const });
+          }
         }
+      } finally {
+        clearTimeout(timeoutId);
       }
     } catch {
       /* use fallback */

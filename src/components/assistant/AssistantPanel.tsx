@@ -67,6 +67,8 @@ export function AssistantPanel({ active, startTyping }: AssistantPanelProps) {
     const nextHistory = [...messages, { role: "user" as const, content: text }];
     setMessages(nextHistory);
     setLoading(true);
+    const controller = new AbortController();
+    const timeoutId = window.setTimeout(() => controller.abort(), 15000);
     try {
       const res = await fetch("/api/chat", {
         method: "POST",
@@ -75,11 +77,19 @@ export function AssistantPanel({ active, startTyping }: AssistantPanelProps) {
           message: text,
           history: messages,
         }),
+        signal: controller.signal,
       });
-      const data = (await res.json()) as { reply?: string; error?: string };
+      let data: { reply?: string; error?: string } = {};
+      try {
+        data = (await res.json()) as { reply?: string; error?: string };
+      } catch {
+        // Handle non-JSON responses gracefully so chat never feels broken.
+      }
       const reply =
         data.reply ??
-        (data.error ? "Sorry, something went wrong. Try again or use the contact form." : "No reply.");
+        (data.error || !res.ok
+          ? "Sorry, something went wrong. Try again or use the contact form."
+          : "No reply.");
       setMessages([...nextHistory, { role: "assistant", content: reply }]);
     } catch {
       setMessages([
@@ -90,6 +100,7 @@ export function AssistantPanel({ active, startTyping }: AssistantPanelProps) {
         },
       ]);
     } finally {
+      window.clearTimeout(timeoutId);
       setLoading(false);
     }
   }
